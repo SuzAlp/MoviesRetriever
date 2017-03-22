@@ -1,0 +1,17 @@
+{
+    "sqlite":{
+      "table_movies":"movies",
+      "table_actors":"actors"
+    },
+    "logger":{
+	  "file_name":"movies.log"
+    },
+    "main":{
+      "base_url":"http://www.imdb.com/",
+      "chart_url":"chart/top/",
+	  "urls_extractor_pattern":"td.titleColumn a[href]",
+	  "num_threads":30,
+	  "movie_extractor_pattern":"div.pagecontent",
+      "time_between_retrive":18000
+    }
+}
