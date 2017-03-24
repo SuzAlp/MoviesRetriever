@@ -3,6 +3,11 @@
       "table_movies":"movies",
       "table_actors":"actors"
     },
+    "neo4j":{
+      "db_address":"localhost:7474",
+      "user":"neo4j",
+      "password":"1234"
+    },
     "logger":{
 	  "file_name":"movies.log"
     },
@@ -12,6 +17,6 @@
 	  "urls_extractor_pattern":"td.titleColumn a[href]",
 	  "num_threads":30,
 	  "movie_extractor_pattern":"div.pagecontent",
-      "time_between_retrive":18000
+      "time_between_retrive":5
     }
 }

@@ -6,3 +6,5 @@ class MoviesDb:
     def select(self):
         pass
 
+    def isExists(self, name):
+        pass

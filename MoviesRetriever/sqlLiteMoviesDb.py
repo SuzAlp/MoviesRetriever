@@ -2,14 +2,17 @@ from MoviesRetriever.moviesDb import MoviesDb
 import sqlite3
 
 class SqlLiteMoviesDb(MoviesDb):
-    def __init__(self, moviesConf, moviesLogger):
+    def __init__(self, movies_conf, movies_logger):
         self._seqNum = 1
-        self._connection = sqlite3.connect(':memory:')
-        self._cursor = self._connection.cursor()
-        self._cursor.execute('''CREATE TABLE IF NOT EXISTS movies(movie_id INT,movie_name TEXT, director TEXT)''')
-        self._cursor.execute('''CREATE TABLE IF NOT EXISTS actors(movie_id INT,actor TEXT)''')
-        self._moviesConf = moviesConf
-        self._moviesLogger = moviesLogger
+        self._movies_conf = movies_conf
+        self._movies_logger = movies_logger
+        try:
+            self._connection = sqlite3.connect(':memory:')
+            self._cursor = self._connection.cursor()
+            self._cursor.execute('''CREATE TABLE IF NOT EXISTS movies(movie_id INT,movie_name TEXT, director TEXT)''')
+            self._cursor.execute('''CREATE TABLE IF NOT EXISTS actors(movie_id INT,actor TEXT)''')
+        except Exception as e:
+            self._movies_logger.LogError("Problem occured while connecting to sqlite DB and initializing.Exception:{0}".format(e))
 
     def getSequence(self):
         current = self._seqNum
@@ -25,18 +28,18 @@ class SqlLiteMoviesDb(MoviesDb):
 
     def insert(self,movie):
         if self.isExists(movie.name) is False:
-            moviesTable = self._moviesConf.configByKey("sqlite","table_movies")
-            actorsTable = self._moviesConf.configByKey("sqlite", "table_actors")
+            moviesTable = self._movies_conf.configByKey("sqlite", "table_movies")
+            actorsTable = self._movies_conf.configByKey("sqlite", "table_actors")
             seqNum = self.getSequence()
             try:
                 self._cursor.execute("INSERT INTO movies (movie_id,movie_name,director) VALUES (?,?,?)",(seqNum, movie.name, movie.director))
             except Exception as e:
-                self._moviesLogger.LogError("Failed inserting the movie - {0} into movies table.Exception:{1}".format(movie.name,e))
+                self._movies_logger.LogError("Failed inserting the movie - {0} into movies table.Exception:{1}".format(movie.name, e))
             try:
                 for actor in movie.actors:
                     self._cursor.execute("INSERT INTO actors (movie_id,actor) VALUES(?,?)",(seqNum,actor))
             except Exception as e:
-                self._moviesLogger.LogError("Failed inserting the movie - {0} into actors table.Exception:{1}".format(movie.name, e))
+                self._movies_logger.LogError("Failed inserting the movie - {0} into actors table.Exception:{1}".format(movie.name, e))
 
 
     def select(self):

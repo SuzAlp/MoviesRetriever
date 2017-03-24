@@ -1,36 +1,34 @@
-from MoviesRetriever import retrievers
+from MoviesRetriever.retrievers import HtmlRetriever
 from MoviesRetriever import sqlLiteMoviesDb
-from MoviesRetriever import extractors
-from MoviesRetriever.moviesLogger import  MoviesLogger
+from MoviesRetriever import neo4jMoviesDb
+from MoviesRetriever.extractors import UrlsExtractor, MoviesExtractor
+from MoviesRetriever.moviesLogger import MoviesLogger
 from MoviesRetriever.moviesConfig import MoviesConfig
 import concurrent.futures
 import time
-import datetime
-import json
 
 
-def start(moviesConf,moviesLogger,db):
-    baseUrl = moviesConf.configByKey("main", "base_url")
-    htmlRet = retrievers.HtmlRetriever(baseUrl + moviesConf.configByKey("main","chart_url"), moviesLogger)
-    html = htmlRet.retrieve()
+def start(movies_conf, movies_logger, db):
+    base_url = movies_conf.configByKey("main", "base_url")
+    html_ret = HtmlRetriever(base_url + movies_conf.configByKey("main", "chart_url"), movies_logger)
+    html = html_ret.retrieve()
     if html is None:
         return False
 
-    urlsExtractor = extractors.UrlsExtractor(html, moviesConf.configByKey("main","urls_extractor_pattern"), moviesLogger)
-    urls = urlsExtractor.extract()
+    urls_extractor = UrlsExtractor(html, movies_conf.configByKey("main", "urls_extractor_pattern"),
+                                   movies_logger)
+    urls = urls_extractor.extract()
     if urls is None:
         return False
-
-
-    movies =[]
-    with concurrent.futures.ThreadPoolExecutor(max_workers=moviesConf.configByKey("main","num_threads")) as executor:
-        future_to_url = {executor.submit(processUrl, url, moviesConf, moviesLogger): url for url in urls}
+    movies = []
+    with concurrent.futures.ThreadPoolExecutor(max_workers=movies_conf.configByKey("main", "num_threads")) as executor:
+        future_to_url = {executor.submit(processUrl, url, movies_conf, movies_logger): url for url in urls}
         for future in concurrent.futures.as_completed(future_to_url):
             url = future_to_url[future]
             try:
                 movie = future.result()
             except Exception as exc:
-                moviesLogger.LogError("Problem occured while processing -{0} .Exception: {1}".format (url, exc))
+                movies_logger.LogError("Problem occured while processing -{0} .Exception: {1}".format(url, exc))
             else:
                 movies.append(movie)
 
@@ -40,33 +38,37 @@ def start(moviesConf,moviesLogger,db):
     db.select()
     return True
 
-def processUrl(url,moviesConf,moviesLogger):
+
+def processUrl(url, movies_conf, movies_logger):
     print("start")
-    htmlRet = retrievers.HtmlRetriever(moviesConf.configByKey("main", "base_url") + url, moviesLogger)
+    htmlRet = HtmlRetriever(movies_conf.configByKey("main", "base_url") + url, movies_logger)
     html = htmlRet.retrieve()
-    movieExtractor = extractors.MoviesExtractor(html, moviesConf.configByKey("main","movie_extractor_pattern"),
-                                                moviesLogger)
+    movieExtractor = MoviesExtractor(html, movies_conf.configByKey("main", "movie_extractor_pattern"),
+                                     movies_logger)
     movie = movieExtractor.extract()
     print("end")
     return movie
 
+
 def main():
-    moviesConf = MoviesConfig()
-    moviesLogger = MoviesLogger(moviesConf)
-    db = sqlLiteMoviesDb.SqlLiteMoviesDb(moviesConf,moviesLogger)
-    timeSleep = moviesConf.configByKey("main","time_between_retrive")
+    movies_conf = MoviesConfig()
+    movies_logger = MoviesLogger(movies_conf)
+    # db = sqlLiteMoviesDb.SqlLiteMoviesDb(moviesConf,moviesLogger)
+    db = neo4jMoviesDb.Neo4jMoviesDb(movies_conf, movies_logger)
+    timeSleep = movies_conf.configByKey("main", "time_between_retrive")
     while True:
-        success = start(moviesConf, moviesLogger, db)
+        success = start(movies_conf, movies_logger, db)
         if success is False:
             errorMsg = "Failed to retrieve movies and save to DB.Check the logs"
-            moviesLogger.LogError(errorMsg)
-            print (errorMsg)
+            movies_logger.LogError(errorMsg)
+            print(errorMsg)
         else:
             infoMsg = "Movies Retrieved successfully"
-            moviesLogger.LogInfo(infoMsg)
+            movies_logger.LogInfo(infoMsg)
             print(infoMsg)
 
         time.sleep(timeSleep)
+
 
 if __name__ == '__main__':
     main()
