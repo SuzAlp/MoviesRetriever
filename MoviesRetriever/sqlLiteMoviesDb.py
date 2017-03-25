@@ -35,11 +35,14 @@ class SqlLiteMoviesDb(MoviesDb):
                 self._cursor.execute("INSERT INTO movies (movie_id,movie_name,director) VALUES (?,?,?)",(seqNum, movie.name, movie.director))
             except Exception as e:
                 self._movies_logger.LogError("Failed inserting the movie - {0} into movies table.Exception:{1}".format(movie.name, e))
+                return False
             try:
                 for actor in movie.actors:
                     self._cursor.execute("INSERT INTO actors (movie_id,actor) VALUES(?,?)",(seqNum,actor))
             except Exception as e:
                 self._movies_logger.LogError("Failed inserting the movie - {0} into actors table.Exception:{1}".format(movie.name, e))
+                return False
+        return True
 
 
     def select(self):
